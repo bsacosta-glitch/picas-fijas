@@ -26,13 +26,13 @@
 
   <section>
     <h3>2. Crear juego</h3>
-    <input id="secretoCrear" placeholder="Tu número (4 dígitos)" maxlength="4">
+    <input id="secretoCrear" type="password" placeholder="Tu número (4 dígitos)" maxlength="4">
     <button onclick="crearJuego()">Crear</button>
   </section>
 
   <section>
     <h3>3. Juegos</h3>
-    <input id="secretoUnir" placeholder="Tu número (4 dígitos)" maxlength="4">
+    <input id="secretoUnir" type="password" placeholder="Tu número (4 dígitos)" maxlength="4">
     <p>Escribe tu número y luego pulsa "Unirse" en el juego.</p>
     <table>
       <thead><tr><th>ID</th><th>Creador</th><th>Estado</th><th>Ganador</th><th></th></tr></thead>
@@ -78,13 +78,21 @@
   async function crearJuego() {
     const numero = document.getElementById("secretoCrear").value;
     const r = await api("POST", "/juego", { nombre: miNombre, numero });
-    if (r) { juegoActual = r.id; refrescar(); }
+    if (r) {
+      juegoActual = r.id;
+      document.getElementById("secretoCrear").value = "";
+      refrescar();
+    }
   }
 
   async function unirse(id) {
     const numero = document.getElementById("secretoUnir").value;
     const r = await api("PUT", "/juego/" + id, { nombre: miNombre, numero });
-    if (r) { juegoActual = id; refrescar(); }
+    if (r) {
+      juegoActual = id;
+      document.getElementById("secretoUnir").value = "";
+      refrescar();
+    }
   }
 
   function ver(id) { juegoActual = id; refrescar(); }
@@ -118,7 +126,7 @@
     ).join("");
   }
 
-  setInterval(refrescar, 2000);  // se actualiza sola cada 2 segundos
+  setInterval(refrescar, 2000);
   refrescar();
 </script>
 </body>
