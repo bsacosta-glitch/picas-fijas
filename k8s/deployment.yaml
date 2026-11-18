@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: picas-fijas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: picas-fijas
+  template:
+    metadata:
+      labels:
+        app: picas-fijas
+    spec:
+      containers:
+        - name: picas-fijas
+           image: brayan1239/picas-fijas:1.0
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /salud
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
