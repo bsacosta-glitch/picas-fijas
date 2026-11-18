@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Picas y Fijas</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 20px auto; }
+    section { border: 1px solid #ccc; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
+    input { padding: 5px; }
+    button { padding: 5px 10px; cursor: pointer; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { border: 1px solid #ddd; padding: 4px; text-align: center; }
+    #mensaje { color: #b00; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Picas y Fijas</h1>
+  <p id="mensaje"></p>
+
+  <section>
+    <h3>1. Entrar</h3>
+    <input id="nombre" placeholder="Tu nombre">
+    <button onclick="login()">Entrar</button>
+    <span id="yo"></span>
+  </section>
+
+  <section>
+    <h3>2. Crear juego</h3>
+    <input id="secretoCrear" placeholder="Tu número (4 dígitos)" maxlength="4">
+    <button onclick="crearJuego()">Crear</button>
+  </section>
+
+  <section>
+    <h3>3. Juegos</h3>
+    <input id="secretoUnir" placeholder="Tu número (4 dígitos)" maxlength="4">
+    <p>Escribe tu número y luego pulsa "Unirse" en el juego.</p>
+    <table>
+      <thead><tr><th>ID</th><th>Creador</th><th>Estado</th><th>Ganador</th><th></th></tr></thead>
+      <tbody id="tablaJuegos"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h3>4. Juego actual: <span id="idActual">ninguno</span></h3>
+    <p id="estadoActual"></p>
+    <input id="intento" placeholder="Tu intento" maxlength="4">
+    <button onclick="jugar()">Jugar</button>
+    <table>
+      <thead><tr><th>Jugador</th><th>Número</th><th>Picas</th><th>Fijas</th></tr></thead>
+      <tbody id="tablaIntentos"></tbody>
+    </table>
+  </section>
+
+<script>
+  let miNombre = null;
+  let juegoActual = null;
+
+  async function api(metodo, url, cuerpo) {
+    const resp = await fetch(url, {
+      method: metodo,
+      headers: { "Content-Type": "application/json" },
+      body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+    });
+    const datos = await resp.json();
+    document.getElementById("mensaje").textContent = resp.ok ? "" : datos.error;
+    return resp.ok ? datos : null;
+  }
+
+  async function login() {
+    const nombre = document.getElementById("nombre").value;
+    const r = await api("POST", "/login", { nombre });
+    if (r) {
+      miNombre = r.nombre;
+      document.getElementById("yo").textContent = "Conectado como " + miNombre;
+    }
+  }
+
+  async function crearJuego() {
+    const numero = document.getElementById("secretoCrear").value;
+    const r = await api("POST", "/juego", { nombre: miNombre, numero });
+    if (r) { juegoActual = r.id; refrescar(); }
+  }
+
+  async function unirse(id) {
+    const numero = document.getElementById("secretoUnir").value;
+    const r = await api("PUT", "/juego/" + id, { nombre: miNombre, numero });
+    if (r) { juegoActual = id; refrescar(); }
+  }
+
+  function ver(id) { juegoActual = id; refrescar(); }
+
+  async function jugar() {
+    const numero = document.getElementById("intento").value;
+    const r = await api("POST", "/juego/" + juegoActual + "/jugar", { nombre: miNombre, numero });
+    if (r) { document.getElementById("intento").value = ""; refrescar(); }
+  }
+
+  async function refrescar() {
+    const lista = await (await fetch("/juego")).json();
+    document.getElementById("tablaJuegos").innerHTML = lista.map(j => `
+      <tr>
+        <td>${j.id}</td><td>${j.creador}</td><td>${j.estado}</td><td>${j.ganador || ""}</td>
+        <td>
+          ${j.estado === "esperando" ? `<button onclick="unirse('${j.id}')">Unirse</button>` : ""}
+          <button onclick="ver('${j.id}')">Ver</button>
+        </td>
+      </tr>`).join("");
+
+    if (!juegoActual) return;
+    const j = await (await fetch("/juego/" + juegoActual)).json();
+    document.getElementById("idActual").textContent = j.id;
+    document.getElementById("estadoActual").textContent =
+      j.estado === "terminado" ? "Terminado. Ganó: " + j.ganador
+      : j.estado === "esperando" ? "Esperando a otro jugador..."
+      : "En juego. Turno de: " + j.turno;
+    document.getElementById("tablaIntentos").innerHTML = j.intentos.map(i =>
+      `<tr><td>${i.jugador}</td><td>${i.numero}</td><td>${i.picas}</td><td>${i.fijas}</td></tr>`
+    ).join("");
+  }
+
+  setInterval(refrescar, 2000);  // se actualiza sola cada 2 segundos
+  refrescar();
+</script>
+</body>
+</html>
